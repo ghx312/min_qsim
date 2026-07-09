@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qsim-yourhandle"          # must be unique on PyPI — check availability first
+name = "min-qsim"
 version = "0.1.0"
-description = "A lightweight n-qubit statevector quantum circuit simulator"
+description = "A minimal n-qubit statevector quantum circuit simulator"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
@@ -20,8 +20,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourhandle/qsim"
-Repository = "https://github.com/yourhandle/qsim"
+Homepage = "https://github.com/yourhandle/min_qsim"
+Repository = "https://github.com/yourhandle/min_qsim"
 
 [tool.setuptools.packages.find]
 where = ["src"]
