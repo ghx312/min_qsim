@@ -72,4 +72,4 @@ print(q.sampling(state, 2, shots=1000))
 
 ## License
 
-See `LICENSE` (currently a placeholder — needs to be filled in).
+See `LICENSE`
