@@ -37,6 +37,6 @@ def custom_state(vector):
     squared_magnitude = np.abs(vector) ** 2
     total_probability = np.sum(squared_magnitude)
     is_normalized = np.isclose(total_probability, 1.0)
-    if not is_normalized: raise ValueError("Vector not normalized")
+    if not is_normalized: raise ValueError("Statevector not normalized")
 
     return vector

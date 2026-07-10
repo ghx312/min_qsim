@@ -90,7 +90,7 @@ def rz(theta):
     return np.array([[np.exp(-1j * theta/2), 0],
                      [0, np.exp(1j * theta/2)]])
 
-def apply_gate(state, gate, qubit_index, n):
+def apply_gate(state, gate, qubit_index: int, n: int):
     """
     Applies a single-qubit gate to the qubit at qubit_index in an n-qubit system.
 
@@ -126,106 +126,166 @@ def apply_gate(state, gate, qubit_index, n):
 
 """Multi-Qubit Gates"""
 
-def apply_cnot(state, control, n):
+def apply_cnot(state, control: int, target: int, n: int):
     """
-    Applies a CNOT gate to a qubit at the given control location
+    Applies a CNOT gate to a qubit
 
     Args:
         state: n-qubit system
-        control: the contrl qubit indicates if the next qubit will flip
+        control: the contrl qubit 
+        target: the target qubit
         n: total number of qubits in the system
 
     Returns:
-        new_state: numpy array, length 2**n, state after applying CNOT at control
+        new_state: numpy array, length 2**n, state after applying CNOT to target qubit
     
     Raises:
-        ValueError: if control + 1 >= n or control < 0
+        ValueError: if control >= n or control < 0
         ValueError: if state is not the right length
+        ValueError: if target == control 
+        ValueError: if target >= n or target < 0
     """
 
-    if control + 1 >= n or control < 0: raise ValueError("Control out of range")
+    if control >= n or control < 0: raise ValueError("Control out of range")
+    if target >= n or target < 0: raise ValueError("Target out of range")
+    if target == control: raise ValueError("Target and control cannot be the same")
     if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
 
-    full_matrix = np.array([[1]])
-    for i in range(n):
-        if i == control: full_matrix = np.kron(full_matrix, CNOT)
-        elif i == control + 1: continue
-        else: full_matrix = np.kron(full_matrix, I)
-    
-    new_state = full_matrix @ state
+    control_offset = n - control - 1
+    target_offset = n - target - 1
+
+    new_state = np.zeros(2 ** n, dtype=complex)
+    for i in range(2 ** n):
+        control_bit = (i >> control_offset) & 1
+        if control_bit == 0:
+            new_state[i] = state[i]
+        else:
+            i_flipped = i ^ (1 << target_offset)
+            new_state[i_flipped] = state[i]
+
     return new_state
 
-def apply_cz(state, control, n):
+def apply_cz(state, qubit_a: int, qubit_b: int, n: int):
     """
-    Applies a CZ gate to a qubit at the given control location
+    Applies a CZ gate to a qubit
 
     Args:
         state: n-qubit system
-        control: the control qubit and the control + 1 qubit determines the changes made by CZ gate
+        qubit_a: the qubit_a qubit (Qubit A and B are symmetric, swapping them yields the same results)
+        qubit_b: the qubit_b qubit
         n: total number of qubits in the system
     
     Returns:
-        new_state: numpy array, length 2**n, state after applying CZ at control
+        new_state: numpy array, length 2**n, state after applying CZ to target qubit
     
     Raises:
-        ValueError: if control + 1 >= n or control < 0
+        ValueError: if qubit_a >= n or qubit_a < 0
+        ValueError: if qubit_b >= n  or qubit_b < 0
+        ValueError: if qubit_b == qubit_a
         ValueError: if state is not the right length
     """
 
-    if control + 1 >= n or control < 0: raise ValueError("Control out of range")
+    if qubit_a >= n or qubit_a < 0: raise ValueError("Qubit A out of range")
+    if qubit_b >= n or qubit_b < 0: raise ValueError("Qubit B out of range")
+    if qubit_b == qubit_a: raise ValueError("Qubit A and B cannot be the same")
     if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
 
-    full_matrix = np.array([[1]])
-    for i in range(n):
-        if i == control: full_matrix = np.kron(full_matrix, CZ)
-        elif i == control + 1: continue
-        else: full_matrix = np.kron(full_matrix, I)
+    a_offset = n - qubit_a - 1
+    b_offset = n - qubit_b - 1
+
+    new_state = np.zeros(2 ** n, dtype=complex)
+    for i in range(2 ** n):
+        a_bit = (i >> a_offset) & 1
+        b_bit = (i >> b_offset) & 1
+        if a_bit == b_bit == 1:
+            new_state[i] = -state[i]
+        else:
+            new_state[i] = state[i]
     
-    new_state = full_matrix @ state
     return new_state
 
-def apply_swap(state, control, n):
+def apply_swap(state, qubit_a: int, qubit_b: int, n: int):
     """
-    Applies a SWAP gate to a qubit at the given control location
+    Applies a SWAP gate to a qubit
 
     Args:
         state: n-qubit system
-        control: swaps the control and control + 1 qubit
+        qubit_a: swaps with qubit_b (qubit_a and qubit_b are the symmetric, changing them yields the same result)
+        qubit_b: swaps with qubit_a
         n: total number of qubits in the system
 
     Returns:
-        new_state: numpy array, length 2**n, state after applying SWAP at control
+        new_state: numpy array, length 2**n, state after applying SWAP
 
     Raises:
-        ValueError: if control + 1 >= n or control < 0
+        ValueError: if qubit_a >= n or qubit_a < 0
+        ValueError: if qubit_b >= n  or qubit_b < 0
+        ValueError: if qubit_b == qubit_a
         ValueError: if state is not the right length
     """
-    if control + 1 >= n or control < 0: raise ValueError("Control out of range")
+    if qubit_a >= n or qubit_a < 0: raise ValueError("Qubit A out of range")
+    if qubit_b >= n or qubit_b < 0: raise ValueError("Qubit B out of range")
+    if qubit_a == qubit_b: raise ValueError("Qubit A and Qubit B cannot be the same")
     if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
 
-    full_matrix = np.array([[1]])
-    for i in range(n):
-        if i == control: full_matrix = np.kron(full_matrix, SWAP)
-        elif i == control + 1: continue
-        else: full_matrix = np.kron(full_matrix, I)
-    
-    new_state = full_matrix @ state
+    a_offset = n - qubit_a - 1
+    b_offset = n - qubit_b - 1
+
+    new_state = np.zeros(2 ** n, dtype=complex)
+    for i in range(2 ** n):
+        a_bit = (i >> a_offset) & 1
+        b_bit = (i >> b_offset) & 1
+        if a_bit == b_bit:
+            new_state[i] = state[i]
+        else:
+            combined_mask = (1 << a_offset) | (1 << b_offset)
+            ab_flipped = i ^ combined_mask
+            new_state[ab_flipped] = state[i]
+
     return new_state
 
-def apply_toffoli(state, control, n):
+def apply_toffoli(state, qubit_a: int, qubit_b: int, target: int, n: int):
     """
     Applies a CCX/toffoli gate to a qubit at the given control location
 
     Args:
         state: n-qubit system
-        control: swaps the control and control + 1 qubit
+        qubit_a: input into CCX gate (qubit_a and qubit_b are symmetric, swapping them yield the same result)
+        qubit_b: input into CCX gate
+        target: flips if qubit_a == qubit_b == 1
         n: total number of qubits in the system
 
     Returns:
-        new_state: numpy array, length 2**n, state after applying SWAP at control
+        new_state: numpy array, length 2**n, state after applying CCX
 
     Raises:
-        ValueError: if control + 1 >= n or control < 0
+        ValueError: if qubit_a > n or qubit_a < 0
+        ValueError: if qubit_b > n or qubit_b < 0
+        ValueError: if target > n or target < 0
+        ValueError: if qubit_a == qubit_b or qubit_a == target or qubit_b == target
         ValueError: if state is not the right length
+        ValueError: if state < 2**3
+        ValueError: if n < 3
     """
-    pass
+    if qubit_a >= n or qubit_a < 0: raise ValueError("Qubit A out of range")
+    if qubit_b >= n or qubit_b < 0: raise ValueError("Qubit B out of range")
+    if target >= n or target < 0: raise ValueError("Target out of range")
+    if qubit_a == target or qubit_a == qubit_b or qubit_b == target: raise ValueError("Qubit A, B and target must be unique")
+    if n < 3 or len(state) < 2**3: raise ValueError("State vector too small")
+    if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
+
+    a_offset = n - qubit_a - 1
+    b_offset = n - qubit_b - 1
+    target_offset = n - target - 1
+
+    new_state = np.zeros(2 ** n, dtype=complex)
+    for i in range(2 ** n):
+        a_bit = (i >> a_offset) & 1
+        b_bit = (i >> b_offset) & 1
+        if a_bit == b_bit == 1:
+            target_flipped = i ^ (1 << target_offset)
+            new_state[target_flipped] = state[i]
+        else:
+            new_state[i] = state[i]
+    
+    return new_state
