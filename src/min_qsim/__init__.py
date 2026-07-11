@@ -1,13 +1,34 @@
-#from .circuit import Circuit
 from .state import init_state, custom_state
-from .gates import X, Y, Z, H, S, T, rx, ry, rz, apply_gate, apply_cnot, apply_cz, apply_swap, apply_toffoli, CNOT, CZ, SWAP, CCX
-from .measurement import get_probabilities #, reset_qubit, measure, measure_qubit, sample
-#from .debug import show_statevector, check_normalized
+from .gates import (
+    I, X, Y, Z, H, S, T,
+    CNOT, CZ, SWAP, CCX,
+    rx, ry, rz,
+    apply_gate, apply_cnot, apply_cz, apply_swap, apply_ccx,
+)
+from .measurement import (
+    get_probabilities,
+    sampling,
+    full_measurement,
+    partial_measurement,
+    is_normalized,
+    reset_qubit,
+)
+from .circuit import Circuit
+from .debug import format_amplitude, state_to_string
 
 __all__ = [
-    "Circuit", "init_state", "custom_state", "reset_qubit",
-    "X", "Y", "Z", "H", "S", "T", "RX", "RY", "RZ", "CNOT", "CZ", "SWAP", "CCX", 
-    "rx", "ry", "rz", "apply_gate", "apply_cnot", "apply_cz", "apply_swap", "apply_toffoli",
-    "measure", "measure_qubit", "sampling", "get_probabilities",
-    "show_statevector", "check_normalized",
+    # State
+    "init_state", "custom_state",
+    # Constant single/multi-qubit gates
+    "I", "X", "Y", "Z", "H", "S", "T", "CNOT", "CZ", "SWAP", "CCX",
+    # Parameterised gates
+    "rx", "ry", "rz",
+    # Gate application
+    "apply_gate", "apply_cnot", "apply_cz", "apply_swap", "apply_ccx",
+    # Measurement
+    "get_probabilities", "sampling", "full_measurement", "partial_measurement", "is_normalized", "reset_qubit",
+    #Circuit
+    "Circuit",
+    #debug
+    "format_amplitude", "state_to_string"
 ]

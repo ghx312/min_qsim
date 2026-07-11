@@ -244,9 +244,9 @@ def apply_swap(state, qubit_a: int, qubit_b: int, n: int):
 
     return new_state
 
-def apply_toffoli(state, qubit_a: int, qubit_b: int, target: int, n: int):
+def apply_ccx(state, qubit_a: int, qubit_b: int, target: int, n: int):
     """
-    Applies a CCX/toffoli gate to a qubit at the given control location
+    Applies a CCX gate to a qubit at the given control location
 
     Args:
         state: n-qubit system

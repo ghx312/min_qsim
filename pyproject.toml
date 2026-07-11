@@ -9,7 +9,7 @@ description = "A minimal n-qubit statevector quantum circuit simulator"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = [{ name = "Wong Pin Rui", email = "wongpinrui2009@gmail.com" }]
 dependencies = [
     "numpy>=1.24",
 ]
@@ -20,8 +20,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourhandle/min_qsim"
-Repository = "https://github.com/yourhandle/min_qsim"
+Homepage = "https://github.com/ghx312/min_qsim"
+Repository = "https://github.com/ghx312/min_qsim"
 
 [tool.setuptools.packages.find]
 where = ["src"]

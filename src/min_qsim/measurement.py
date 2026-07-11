@@ -1,4 +1,26 @@
 import numpy as np
+from min_qsim import gates
+
+def is_normalized(state, n: int):
+    """
+    Checks if a statevector is normalized
+
+    Args:
+        state: n-qubit system
+        n: total number of qubits in the system
+
+    Returns:
+        is_normalized: True or False that the statevector is normalized
+
+    Raises:
+        ValueError: state is not the right length
+    """
+    if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
+
+    squared_magnitude = np.abs(state) ** 2
+    total_probability = np.sum(squared_magnitude)
+    normalized = np.isclose(total_probability, 1.0)
+    return normalized
 
 def get_probabilities(state, n: int, basis_state: str=None):
     """
@@ -20,12 +42,10 @@ def get_probabilities(state, n: int, basis_state: str=None):
         ValueError: basis_state does not exist
     """
     if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
-    squared_magnitude = np.abs(state) ** 2
-    total_probability = np.sum(squared_magnitude)
-    is_normalized = np.isclose(total_probability, 1.0)
-    if not is_normalized: raise ValueError("Statevector not normalized")
+    if not is_normalized(state, n): raise ValueError("Statevector not normalized")
 
     prob_dict = {}
+    squared_magnitude = np.abs(state) ** 2
     for i in range(2 ** n):
         current_state = bin(i)[2:].zfill(n)
         current_prob = round(float(squared_magnitude[i]), 3)
@@ -54,6 +74,9 @@ def sampling(state, n: int, shots: int):
         ValueError: state is not right length
         ValueError: statevector is not normalized
     """
+    if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
+    if not is_normalized(state, n): raise ValueError("Statevector not normalized")
+
     prob_dict = get_probabilities(state, n)
     basis_states = list(prob_dict.keys())
     probability = list(prob_dict.values())
@@ -79,6 +102,9 @@ def full_measurement(state, n: int):
     ValueError: state is not right length
     ValueError: statevector is not normalized
     """
+    if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
+    if not is_normalized(state, n): raise ValueError("Statevector not normalized")
+
     data = sampling(state, n, 1)
     freq_idx = 0
     freq_data = list(data.values())
@@ -106,7 +132,7 @@ def partial_measurement(state, n: int, qubit_to_measure):
         qubit_to_measure: A list consisting of the index of qubits the user wants to measure
 
     Returns:
-        A normalized statevector dependant on the qubit_dict provided and state
+        A normalized statevector dependant on the qubit_dict provided and state + Measured basis
 
     Raises:
         ValueError: Initial statevector not normalized
@@ -114,10 +140,7 @@ def partial_measurement(state, n: int, qubit_to_measure):
         ValueError: Index in qubit_to_measure out of range
     """ 
     if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
-    squared_magnitude = np.abs(state) ** 2
-    total_probability = np.sum(squared_magnitude)
-    is_normalized = np.isclose(total_probability, 1.0)
-    if not is_normalized: raise ValueError("Statevector not normalized")
+    if not is_normalized(state, n): raise ValueError("Statevector not normalized")
     for i in range(len(qubit_to_measure)):
         if qubit_to_measure[i] >= n or qubit_to_measure[i] < 0:
             raise ValueError("Qubit index out of range")
@@ -154,4 +177,33 @@ def partial_measurement(state, n: int, qubit_to_measure):
         if match: new_state[i] = state[i]
 
     new_state /= np.sqrt(m_qubit_probabilities[basis_state_idx])
+    return new_state, measured
+
+def reset_qubit(state, n: int, qubit_index: int):
+    """
+    Forces a single qubit into the |0> state, regardless of its current
+    value. Internally measures the qubit (collapsing any entanglement),
+    then conditionally applies an X gate to correct a |1> outcome back to |0>.
+
+    Args:
+        state: n-qubit system
+        n: total number of qubits in the system
+        qubit_index: the single qubit to reset
+
+    Returns:
+        new_state: numpy array, length 2**n, state after reset
+
+    Raises:
+        ValueError: if qubit_index >= n or qubit_index < 0
+        ValueError: if state is not the right length
+        ValueError: if state is not normalized
+    """
+    if qubit_index >= n or qubit_index < 0: raise ValueError("Qubit Index out of range")
+    if len(state) != 2 ** n: raise ValueError("Incorrect values provided")
+    if not is_normalized(state, n): raise ValueError("Statevector not normalized")
+
+    new_state, measured = partial_measurement(state, n, [qubit_index])
+    if measured == "1": new_state = gates.apply_gate(new_state, gates.X, qubit_index, n)
+
     return new_state
+
