@@ -1,13 +1,13 @@
 # min_qsim
 
-A minimalistic n-qubit statevector quantum circuit simulator, built from scratch in NumPy for educational purposes. No external quantum computing libraries — every gate, state, and measurement routine is implemented directly on top of the raw statevector.
+A minimalistic n-qubit statevector quantum circuit simulator, built from scratch in NumPy for educational purposes. No external quantum computing libraries — every gate, measurement, and state operation is implemented directly on top of the raw statevector using explicit bit-manipulation, not black-box matrix libraries.
+
+This project exists to make the bridge between pen-and-paper quantum mechanics (bra-ket notation, unitary matrices, tensor products, Born's rule) and working code as transparent as possible.
 
 ## Installation
 
 ```bash
-git clone https://github.com/yourhandle/min_qsim.git
-cd min_qsim
-pip install -e .
+pip install min-qsim
 ```
 
 Requires Python >= 3.9 and NumPy >= 1.24.
@@ -18,58 +18,101 @@ Requires Python >= 3.9 and NumPy >= 1.24.
 import min_qsim as q
 
 # Bell state: |00> -> H(q0) -> CNOT(q0, q1)
-state = q.init_state(2)
-state = q.apply_gate(state, q.H, 0, 2)
-state = q.apply_cnot(state, 0, 1, 2)
+qc = q.Circuit(2)
+qc.h(0).cnot(0, 1)
+print(qc)
+# 0.707|00> + 0.707|11>
 
-print(q.get_probabilities(state, 2))
-# {'00': 0.5, '01': 0.0, '10': 0.0, '11': 0.5}
-
-print(q.sampling(state, 2, shots=1000))
-# {'00': 502, '01': 0, '10': 0, '11': 498}
+outcome = qc.fmeasure()
+print(outcome)
+# '00' or '11' -- collapses the entangled pair together
 ```
 
-## Status
+## The `Circuit` class
 
-### Completed
+`Circuit` wraps every operation in the library so you don't have to manually thread a statevector and qubit count through function calls. Every gate method mutates the circuit's internal state and returns `self`, so calls can be chained.
 
-**State initialization** (`state.py`)
-- `init_state(n)` — initializes an n-qubit register to |00...0>
-- `custom_state(vector)` — validates and loads an arbitrary user-provided statevector (checks power-of-2 length and normalization)
+```python
+qc = q.Circuit(n, tol=1e-6)  # n qubits, initialized to |00...0>
+```
 
-**Gates** (`gates.py`)
-- Constant single-qubit gates: `I`, `X`, `Y`, `Z`, `H`, `S`, `T`
-- Constant multi-qubit gates (as raw matrices): `CNOT`, `CZ`, `SWAP`, `CCX`
-- Parameterised rotation gates: `rx(theta)`, `ry(theta)`, `rz(theta)`
-- `apply_gate(state, gate, qubit_index, n)` — applies any single-qubit gate to a target qubit via full tensor-product expansion, with unitarity/shape/index validation
-- `apply_cnot(state, control, target, n)` — bitmask-based CNOT application (no full matrix construction)
-- `apply_cz(state, qubit_a, qubit_b, n)` — bitmask-based CZ application
-- `apply_swap(state, qubit_a, qubit_b, n)` — bitmask-based SWAP application
-- `apply_toffoli(state, qubit_a, qubit_b, target, n)` — bitmask-based CCX application
+- `tol` controls how small an amplitude has to be before it's hidden from the printed representation (`print(qc)`), not the internal precision of any calculation.
 
-**Measurement** (`measurement.py`)
-- `get_probabilities(state, n, basis_state=None)` — returns the probability of every basis state, or a single basis state's probability
-- `sampling(state, n, shots)` — repeatedly samples the distribution to build up measurement statistics without collapsing state between shots
-- `full_measurement(state, n)` — performs a single full projective measurement, returning the collapsed state and the observed basis string
-- `partial_measurement(state, n, qubit_to_measure)` — measures a subset of qubits, returning the correctly renormalized post-measurement statevector over the full register
+### Single-qubit gates
+```python
+qc.x(qubit)          # Pauli-X
+qc.y(qubit)          # Pauli-Y
+qc.z(qubit)          # Pauli-Z
+qc.h(qubit)          # Hadamard
+qc.s(qubit)          # S (phase) gate
+qc.t(qubit)          # T gate
+qc.rx(qubit, theta)  # rotation about x-axis
+qc.ry(qubit, theta)  # rotation about y-axis
+qc.rz(qubit, theta)  # rotation about z-axis
+```
 
-**Tests** (`tests/`)
-- Basic sanity check for `custom_state` + `partial_measurement` (`test_gates.py`)
+### Multi-qubit gates
+```python
+qc.cnot(control, target)
+qc.cz(qubit_a, qubit_b)          # symmetric: order doesn't matter
+qc.swap(qubit_a, qubit_b)        # symmetric: order doesn't matter
+qc.ccx(qubit_a, qubit_b, target) # Toffoli/CCX; qubit_a/qubit_b symmetric
+```
 
-### Not yet implemented
+All multi-qubit gates work on **arbitrary, non-adjacent qubits** — there's no requirement that control and target be next to each other.
 
-- **`Circuit` class** (`circuit.py`) — a builder API for composing gates into a named circuit and running it end-to-end, instead of manually threading the statevector through `apply_*` calls
-- **Debug utilities** (`debug.py`) — `show_statevector` (pretty-print amplitudes/probabilities) and `check_normalized` (standalone normalization check)
-- **`reset_qubit`** — force a qubit back to |0> after measurement
-- Broader test coverage — gates, measurement, and edge cases beyond the single existing script
-- Packaging cleanup — `LICENSE` file is a placeholder/typo'd as `LISENCE`, `pyproject.toml` author fields still say "Your Name"/"you@example.com", and the GitHub URLs are placeholders
+### Measurement
+```python
+qc.fmeasure()          # full measurement: collapses the entire state, returns a basis string like '011'
+qc.pmeasure([0, 2])    # partial measurement on specific qubits, returns a combo string
+qc.probabilities()     # dict of {basis_state: probability} without collapsing anything
+qc.probabilities('01') # probability of one specific basis state
+```
+
+### Other operations
+```python
+qc.reset(qubit)              # forces a qubit back to |0>, collapsing any entanglement first
+qc.set_state(vector)          # load a custom statevector (must match 2**n in length and be normalized)
+qc.compose(other_circuit)     # tensor-product this circuit with another; self's qubits come first
+```
+
+### Inspecting a circuit
+```python
+print(qc)   # human-readable ket notation, e.g. "0.707|00> + 0.707|11>"
+```
+
+## Function-level API
+
+Every `Circuit` method is a thin wrapper around standalone functions, all of which are also importable directly if you'd rather work with raw statevectors:
+
+```python
+from min_qsim import (
+    init_state, custom_state,
+    X, Y, Z, H, S, T, CNOT, CZ, SWAP, CCX,   # gate constants
+    rx, ry, rz,                               # parameterized gate constructors
+    apply_gate, apply_cnot, apply_cz, apply_swap, apply_ccx,
+    get_probabilities, sampling, full_measurement, partial_measurement,
+    reset_qubit, is_normalized,
+    state_to_string, format_amplitude,
+)
+```
+
+- `init_state(n)` / `custom_state(vector, n)` — build a statevector from scratch or from a user-provided array.
+- `apply_gate(state, gate, qubit_index, n)` — apply any single-qubit gate to any qubit in an n-qubit system.
+- `apply_cnot` / `apply_cz` / `apply_swap` / `apply_ccx` — multi-qubit gates, all generalized to arbitrary qubit positions via bit-manipulation on basis-state indices.
+- `get_probabilities(state, n, basis_state=None)` — raw probabilities without collapsing the state.
+- `sampling(state, n, shots)` — repeated measurement, returns frequency counts.
+- `full_measurement` / `partial_measurement` — collapse and observe (single draw, not multi-shot).
+- `reset_qubit(state, n, qubit_index)` — measure-and-correct a single qubit back to |0>.
+- `is_normalized(state, n)` — sanity-check a statevector sums to probability 1.
+- `state_to_string(state, n, tol=1e-6)` — human-readable ket notation for any statevector.
 
 ## Design notes
 
-- Gate application comes in two flavors: `apply_gate` builds the full 2^n x 2^n operator via `np.kron` (simple, general, but O(4^n) memory) — used only for single-qubit gates. Multi-qubit gates (`apply_cnot`, `apply_cz`, `apply_swap`, `apply_toffoli`) instead operate directly on state-vector indices using bitmasks, avoiding full matrix construction.
-- All qubit indexing is big-endian (qubit 0 is the most significant bit in the basis string).
-- `sampling` draws from the probability distribution without collapsing the state; `full_measurement` and `partial_measurement` return properly collapsed and renormalized statevectors.
+- **Leftmost-first convention**: qubit 0 is the most-significant bit of every basis-state index.
+- Multi-qubit gates use direct bit-manipulation (`(i >> (n-1-q)) & 1` to extract a bit, XOR/OR of masks to flip) rather than constructing full kron-chain matrices — this keeps memory and computation manageable and mirrors how you'd reason about the gate by hand.
+- `partial_measurement`/`reset_qubit` preserve relative phase and magnitude between surviving amplitudes; only a fully-collapsed single-basis-state result can have its amplitude hardcoded to 1.0 (global phase is unobservable).
 
 ## License
 
-See `LICENSE`
+MIT
