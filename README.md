@@ -116,3 +116,7 @@ from min_qsim import (
 ## License
 
 MIT
+
+## Future Updates  
+- Algorithmica Optimisation for speed
+- New features for quantum computation
